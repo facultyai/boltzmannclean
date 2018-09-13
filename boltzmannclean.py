@@ -7,15 +7,13 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import MinMaxScaler, Imputer
 from sklearn.model_selection import GridSearchCV
 
-COLNAME_SEPARATOR = '_boltzmannclean'
+COLNAME_SEPARATOR = "_boltzmannclean"
 
 
 def clean(dataframe, numerical_columns, categorical_columns, tune_rbm):
     """Replaces missing values in dataframe with imputed values from an RBM"""
 
-    numerics, scaler = preprocess_numerics(
-        dataframe, numerical_columns
-    )
+    numerics, scaler = preprocess_numerics(dataframe, numerical_columns)
 
     categoricals, category_dict = preprocess_categoricals(
         dataframe, categorical_columns
@@ -25,23 +23,18 @@ def clean(dataframe, numerical_columns, categorical_columns, tune_rbm):
 
     if preprocessed_array.size > 0:
         # create and train a Restricted Boltzmann Machine
-        rbm = train_rbm(
-            preprocessed_array,
-            tune_hyperparameters=tune_rbm
-        )
+        rbm = train_rbm(preprocessed_array, tune_hyperparameters=tune_rbm)
 
         imputed_array = rbm.transform(preprocessed_array)
 
         imputed_numerics = postprocess_numerics(
-            imputed_array[:, :numerics.shape[1]],
-            dataframe[numerical_columns],
-            scaler
+            imputed_array[:, : numerics.shape[1]], dataframe[numerical_columns], scaler
         )
 
         imputed_categoricals = postprocess_categoricals(
-            imputed_array[:, numerics.shape[1]:],
+            imputed_array[:, numerics.shape[1] :],
             dataframe[categorical_columns],
-            category_dict
+            category_dict,
         )
 
         imputed_dataframe = imputed_numerics.join(imputed_categoricals)
@@ -79,18 +72,15 @@ def preprocess_categoricals(dataframe, categorical_columns):
         category_dict = {}
         for colname in categoricals.columns:
             category_dict[colname] = (
-                categoricals[colname].astype('category').cat.categories
+                categoricals[colname].astype("category").cat.categories
             )
-            categoricals[colname] = (
-                categoricals[colname].astype('category').cat.codes
-            )
+            categoricals[colname] = categoricals[colname].astype("category").cat.codes
 
         categoricals[categoricals == -1] = np.nan
 
         # one-hot encoding
         encoded = pd.get_dummies(
-            categoricals.astype('object'),
-            prefix_sep=COLNAME_SEPARATOR
+            categoricals.astype("object"), prefix_sep=COLNAME_SEPARATOR
         )
 
         col_iterator = encoded.items()
@@ -121,19 +111,21 @@ def reverse_dummy_encoding(dummy_dataframe, category_dict):
     col_positions = {}
 
     for colname, values in category_dict.items():
-        col_positions[colname] = list(
-            range(current_col, current_col + len(values))
-        )
+        col_positions[colname] = list(range(current_col, current_col + len(values)))
         current_col += len(values)
 
-    dataframe = pd.DataFrame({
-        colname: pd.Categorical.from_codes(
-            np.argmax(
-                dummy_dataframe.iloc[:, col_positions[colname]].values, axis=1
-            ),
-            category_dict[colname]
-        ) for colname in category_dict.keys()
-    }, dtype='object')
+    dataframe = pd.DataFrame(
+        {
+            colname: pd.Categorical.from_codes(
+                np.argmax(
+                    dummy_dataframe.iloc[:, col_positions[colname]].values, axis=1
+                ),
+                category_dict[colname],
+            )
+            for colname in category_dict.keys()
+        },
+        dtype="object",
+    )
 
     return dataframe
 
@@ -194,9 +186,7 @@ def preprocess_numerics(dataframe, numerical_columns):
     """
 
     # converts to numerical values where possible, replaces with NaN if not
-    numerics = pd.DataFrame(
-        dataframe[numerical_columns]._convert(numeric=True)
-    )
+    numerics = pd.DataFrame(dataframe[numerical_columns]._convert(numeric=True))
     # selects only columns with some numerical values
     numerics = numerics.select_dtypes([np.number])
 
@@ -250,8 +240,7 @@ def postprocess_numerics(imputed_array, original_dataframe, scaler):
 
     imputed_dataframe = pd.DataFrame(array, index=original_dataframe.index)
     imputed_dataframe.columns = (
-        original_dataframe._convert(numeric=True)
-        .select_dtypes([np.number]).columns
+        original_dataframe._convert(numeric=True).select_dtypes([np.number]).columns
     )
 
     for colname in imputed_dataframe.columns:
@@ -281,19 +270,14 @@ def train_rbm(array, tune_hyperparameters):
     """
 
     rbm = RestrictedBoltzmannMachine(
-        n_hidden=array.shape[1],
-        batchsize=min(array.shape[0], 10)
+        n_hidden=array.shape[1], batchsize=min(array.shape[0], 10)
     )
 
     if tune_hyperparameters:
         rbm.max_epochs = 50
         param_grid = {
-            "n_hidden": [
-                rbm.n_hidden // 10, rbm.n_hidden, rbm.n_hidden * 10
-            ],
-            "adagrad": [
-                True, False
-            ]
+            "n_hidden": [rbm.n_hidden // 10, rbm.n_hidden, rbm.n_hidden * 10],
+            "adagrad": [True, False],
         }
         grid_search = GridSearchCV(rbm, param_grid=param_grid)
         grid_search.fit(array)
@@ -338,9 +322,13 @@ class RestrictedBoltzmannMachine(BaseEstimator, TransformerMixin):
 
     def __init__(
         self,
-        n_hidden=100, learn_rate=0.01,
-        batchsize=10, dropout_fraction=0.5, max_epochs=1,
-        adagrad=True, verbose=False
+        n_hidden=100,
+        learn_rate=0.01,
+        batchsize=10,
+        dropout_fraction=0.5,
+        max_epochs=1,
+        adagrad=True,
+        verbose=False,
     ):
         self.n_hidden = n_hidden
         self.learn_rate = learn_rate
@@ -375,9 +363,7 @@ class RestrictedBoltzmannMachine(BaseEstimator, TransformerMixin):
             X = X.reshape((1, X.shape[0]))
 
         X_reco = self._reconstruct_until_stable(
-            np.nan_to_num(X),
-            self.w_, self.a_, self.b_,
-            fixed_values=np.isfinite(X)
+            np.nan_to_num(X), self.w_, self.a_, self.b_, fixed_values=np.isfinite(X)
         )
 
         return X_reco
@@ -403,7 +389,7 @@ class RestrictedBoltzmannMachine(BaseEstimator, TransformerMixin):
         prior = np.true_divide(np.nan_to_num(X).sum(axis=0), num_examples)
         prior[prior == 1] = 0.9999
 
-        a = np.log(1/(1 - prior))
+        a = np.log(1 / (1 - prior))
         a = np.reshape(a, (1, n_visible))
         delta_a = np.zeros_like(a)
 
@@ -424,7 +410,7 @@ class RestrictedBoltzmannMachine(BaseEstimator, TransformerMixin):
 
         for epoch in range(self.max_epochs):
             if self.verbose:
-                print('\rEpoch ', epoch + 1, ' of ', self.max_epochs, end='')
+                print("\rEpoch ", epoch + 1, " of ", self.max_epochs, end="")
 
             np.random.shuffle(X)
 
@@ -432,7 +418,7 @@ class RestrictedBoltzmannMachine(BaseEstimator, TransformerMixin):
 
                 # positive phase of contrastive divergence
 
-                v0 = X[int(batch * batchsize):int((batch + 1) * batchsize)]
+                v0 = X[int(batch * batchsize) : int((batch + 1) * batchsize)]
 
                 # deal with nans
                 visible_dropout = 1 - np.isfinite(v0).sum(axis=1) / v0.shape[1]
@@ -477,40 +463,22 @@ class RestrictedBoltzmannMachine(BaseEstimator, TransformerMixin):
                     a_adagrad += np.square(a_grad)
                     b_adagrad += np.square(b_grad)
 
-                    w_learn_rate = (
-                        self.learn_rate / np.sqrt(adagrad_eps + w_adagrad)
-                    )
+                    w_learn_rate = self.learn_rate / np.sqrt(adagrad_eps + w_adagrad)
 
-                    a_learn_rate = (
-                        self.learn_rate / np.sqrt(adagrad_eps + a_adagrad)
-                    )
+                    a_learn_rate = self.learn_rate / np.sqrt(adagrad_eps + a_adagrad)
 
-                    b_learn_rate = (
-                        self.learn_rate / np.sqrt(adagrad_eps + b_adagrad)
-                    )
+                    b_learn_rate = self.learn_rate / np.sqrt(adagrad_eps + b_adagrad)
                 else:
                     w_learn_rate = self.learn_rate
                     a_learn_rate = self.learn_rate
                     b_learn_rate = self.learn_rate
 
-                delta_w = (
-                    delta_w * m
-                    + (w_learn_rate / batchsize) * (w_grad)
-                )
-                delta_a = (
-                    delta_a * m
-                    + (a_learn_rate / batchsize) * (a_grad)
-                )
-                delta_b = (
-                    delta_b * m
-                    + (b_learn_rate / batchsize) * (b_grad)
-                )
+                delta_w = delta_w * m + (w_learn_rate / batchsize) * (w_grad)
+                delta_a = delta_a * m + (a_learn_rate / batchsize) * (a_grad)
+                delta_b = delta_b * m + (b_learn_rate / batchsize) * (b_grad)
 
                 #  L1 weight decay
-                w += (
-                    delta_w
-                    - weight_decay * np.sign(w) * (self.learn_rate/batchsize)
-                )
+                w += delta_w - weight_decay * np.sign(w) * (self.learn_rate / batchsize)
                 a += delta_a
                 b += delta_b
 
@@ -518,7 +486,7 @@ class RestrictedBoltzmannMachine(BaseEstimator, TransformerMixin):
         self.a_ = a
         self.b_ = b
         if self.verbose:
-            print('\n')
+            print("\n")
 
         return self
 
@@ -528,15 +496,15 @@ class RestrictedBoltzmannMachine(BaseEstimator, TransformerMixin):
         h = np.multiply(
             h,
             np.random.binomial(
-                [np.ones((v.shape[0], self.n_hidden))],
-                1 - dropout_fraction
-            )[0] * (1.0/(1 - dropout_fraction))
+                [np.ones((v.shape[0], self.n_hidden))], 1 - dropout_fraction
+            )[0]
+            * (1.0 / (1 - dropout_fraction)),
         )
         return prob_h, h
 
     def _logistic(self, x, w, b):
         xw = np.dot(x, w)
-        return 1 / (1 + np.exp(- xw - b))
+        return 1 / (1 + np.exp(-xw - b))
 
     def _free_energy(self, v, w, a, b):
         vw = np.dot(v, w)
@@ -547,9 +515,7 @@ class RestrictedBoltzmannMachine(BaseEstimator, TransformerMixin):
         v = self._logistic(h, w.T, a)
         return v
 
-    def _reconstruct_until_stable(
-        self, v, w, a, b, fixed_values=[], threshold=0.01
-    ):
+    def _reconstruct_until_stable(self, v, w, a, b, fixed_values=[], threshold=0.01):
 
         reco_free_energy = self._free_energy(v, w, a, b)
         reco_free_energy_new = reco_free_energy.copy()
@@ -557,7 +523,7 @@ class RestrictedBoltzmannMachine(BaseEstimator, TransformerMixin):
         batchsize = v.shape[0]
 
         delta_free_energy = np.ones((batchsize, 1))
-        converged = np.zeros((batchsize, ), dtype=bool)
+        converged = np.zeros((batchsize,), dtype=bool)
 
         v_true = v.copy()
 
@@ -576,11 +542,8 @@ class RestrictedBoltzmannMachine(BaseEstimator, TransformerMixin):
             )
 
             delta_free_energy[unconverged] = np.abs(
-                reco_free_energy_new[unconverged]
-                - reco_free_energy[unconverged]
-            ) / (
-                reco_free_energy[unconverged] + 1e-8
-            )
+                reco_free_energy_new[unconverged] - reco_free_energy[unconverged]
+            ) / (reco_free_energy[unconverged] + 1e-8)
 
             converged = (delta_free_energy < threshold).flatten()
 
