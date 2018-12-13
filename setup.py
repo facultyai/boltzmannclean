@@ -12,7 +12,7 @@ setup(
     version="0.1.2",
     url="https://github.com/ASIDataScience/sherlockml-boltzmannclean",
     author="ASI Data Science",
-    author_email="engineering@asidatascience.com",
+    author_email="opensource@asidatascience.com",
     description="Fill missing values in DataFrames with Restricted Boltzmann Machines",
     license="Apache 2.0",
     long_description=read_long_description(),
