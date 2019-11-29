@@ -10,7 +10,7 @@ Installation
 
 .. code-block:: bash
 
-    pip install sherlockml-boltzmannclean
+    pip install boltzmannclean
 
 
 Usage
