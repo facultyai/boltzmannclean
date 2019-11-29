@@ -12,7 +12,6 @@ Installation
 
     pip install boltzmannclean
 
-
 Usage
 -----
 
@@ -77,7 +76,6 @@ _   sepal length (cm)   sepal width (cm)    petal length (cm)   petal width (cm)
 4   5.0                  3.6                  1.4                  0.2                  0
 =   =================   ================    =================   ================    ======
 
-
 Add some noise:
 
 .. code-block:: python
@@ -114,7 +112,6 @@ Clean the DataFrame:
     )
 
     df_iris_cleaned.round(1).head()
-
 
 =   =================   ================    =================   ================    ======
 _   sepal length (cm)   sepal width (cm)    petal length (cm)   petal width (cm)    target
