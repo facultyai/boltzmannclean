@@ -1,5 +1,5 @@
-sherlockml-boltzmannclean
-=========================
+boltzmannclean
+==============
 
 Fill missing values in a pandas DataFrame using a Restricted Boltzmann Machine.
 
